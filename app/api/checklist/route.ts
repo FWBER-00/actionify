@@ -2,22 +2,33 @@ import { NextResponse } from "next/server";
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import OpenAI from "openai";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-
+// ✅ Preflight 대응 (배포에서 405 방지)
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
 
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey) {
-  return NextResponse.json(
-    { error: "OPENAI_API_KEY is missing on server (Vercel env var not set)." },
-    { status: 500 }
-  );
-}
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY is missing on server (Vercel env var not set)." },
+        { status: 500 }
+      );
+    }
 
-const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey });
 
     const { url } = await req.json();
 
@@ -47,37 +58,34 @@ const openai = new OpenAI({ apiKey });
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
 
-const title = article?.title?.trim() || "Checklist";
+    const title = article?.title?.trim() || "Checklist";
 
-// 1차: Readability 본문
-let content = (article?.textContent || "").trim();
+    // 1차: Readability 본문
+    let content = (article?.textContent || "").trim();
 
-// 2차: Readability 실패 시, 너무 짧은 요소들(메뉴/푸터) 최대한 배제해서 긁기
-if (!content || content.length < 200) {
-  const doc = dom.window.document;
+    // 2차: Readability 실패 시, 너무 짧은 요소들(메뉴/푸터) 최대한 배제해서 긁기
+    if (!content || content.length < 200) {
+      const doc = dom.window.document;
 
-  // 스팸/짧은 UI 영역 제거 시도
-  doc.querySelectorAll("nav, header, footer, aside, script, style, noscript").forEach((el) => el.remove());
+      doc
+        .querySelectorAll("nav, header, footer, aside, script, style, noscript")
+        .forEach((el) => el.remove());
 
-  // main/article 우선, 없으면 body
-  const main =
-    doc.querySelector("main") ||
-    doc.querySelector("article") ||
-    doc.querySelector("[role='main']") ||
-    doc.body;
+      const main =
+        doc.querySelector("main") ||
+        doc.querySelector("article") ||
+        doc.querySelector("[role='main']") ||
+        doc.body;
 
-  const text = (main?.textContent || "").replace(/\s+/g, " ").trim();
-  content = text;
-}
+      content = (main?.textContent || "").replace(/\s+/g, " ").trim();
+    }
 
-if (!content || content.length < 200) {
-  return NextResponse.json(
-    { error: "본문을 충분히 추출하지 못했습니다. (JS 렌더링/로그인/차단 페이지일 수 있음)" },
-    { status: 422 }
-  );
-}
-
-
+    if (!content || content.length < 200) {
+      return NextResponse.json(
+        { error: "본문을 충분히 추출하지 못했습니다. (JS 렌더링/로그인/차단 페이지일 수 있음)" },
+        { status: 422 }
+      );
+    }
 
     // 3) LLM에게 '실행 체크리스트'만 뽑으라고 요청
     const prompt = `
@@ -108,16 +116,18 @@ ${content.slice(0, 12000)}
       .filter(Boolean);
 
     return NextResponse.json({ title, items });
-} catch (e: any) {
+  } catch (e: any) {
     console.error("CHECKLIST_API_ERROR:", e);
     return NextResponse.json(
       {
         error: e?.message || "unknown error",
         name: e?.name || null,
-        // 너무 길면 곤란하니 앞부분만
-        stack: typeof e?.stack === "string" ? e.stack.split("\n").slice(0, 8) : null,
+        stack:
+          typeof e?.stack === "string"
+            ? e.stack.split("\n").slice(0, 8)
+            : null,
       },
       { status: 500 }
     );
   }
-}  
+}
