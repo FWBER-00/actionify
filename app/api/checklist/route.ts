@@ -3,12 +3,22 @@ import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const runtime = "nodejs";
+
+
 
 export async function POST(req: Request) {
   try {
+    const apiKey = process.env.OPENAI_API_KEY;
+if (!apiKey) {
+  return NextResponse.json(
+    { error: "OPENAI_API_KEY is missing on server (Vercel env var not set)." },
+    { status: 500 }
+  );
+}
+
+const openai = new OpenAI({ apiKey });
+
     const { url } = await req.json();
 
     if (!url || typeof url !== "string") {
