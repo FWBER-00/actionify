@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import OpenAI from "openai";
-
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 
 
@@ -108,10 +108,16 @@ ${content.slice(0, 12000)}
       .filter(Boolean);
 
     return NextResponse.json({ title, items });
-  } catch (e: any) {
+} catch (e: any) {
+    console.error("CHECKLIST_API_ERROR:", e);
     return NextResponse.json(
-      { error: e?.message || "unknown error" },
+      {
+        error: e?.message || "unknown error",
+        name: e?.name || null,
+        // 너무 길면 곤란하니 앞부분만
+        stack: typeof e?.stack === "string" ? e.stack.split("\n").slice(0, 8) : null,
+      },
       { status: 500 }
     );
   }
-}
+}  
