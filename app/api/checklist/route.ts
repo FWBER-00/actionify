@@ -6,6 +6,14 @@ import OpenAI from "openai";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+    return NextResponse.json({
+      ok: true,
+      hint: "This endpoint expects POST with { url }",
+    });
+  }
+  
+
 // ✅ Preflight 대응 (배포에서 405 방지)
 export async function OPTIONS() {
   return new Response(null, {
