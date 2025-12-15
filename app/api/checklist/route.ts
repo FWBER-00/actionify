@@ -9,9 +9,11 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     return NextResponse.json({
       ok: true,
-      hint: "This endpoint expects POST with { url }",
+      methods: ["GET", "POST", "OPTIONS"],
+      note: "If POST is 405, you're hitting an old deployment or wrong domain.",
     });
   }
+  
   
 
 // ✅ Preflight 대응 (배포에서 405 방지)
