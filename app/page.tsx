@@ -27,11 +27,22 @@ export default function Home() {
         body: JSON.stringify({ url }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "request failed");
+      const text = await res.text();
 
-      setTitle(data.title);
-      setItems(Array.isArray(data.items) ? data.items : []);
+let data: any = null;
+try {
+  data = text ? JSON.parse(text) : null;
+} catch {
+  throw new Error(
+    `API returned non-JSON (status ${res.status}). First 200 chars: ${text.slice(0, 200)}`
+  );
+}
+
+if (!res.ok) throw new Error(data?.error || `request failed: ${res.status}`);
+
+setTitle(data.title || "");
+setItems(Array.isArray(data.items) ? data.items : []);
+
     } catch (e: any) {
       setError(e?.message || "unknown error");
     } finally {
