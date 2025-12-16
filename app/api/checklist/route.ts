@@ -1,32 +1,38 @@
 import { NextResponse } from "next/server";
+import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 
+function clean(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 export async function GET() {
-  return NextResponse.json({ ok: true, v: "RAW-DEBUG-1" });
+  return NextResponse.json({ ok: true, v: "CHEERIO-ONLY" });
 }
 
 export async function POST(req: Request) {
   const raw = await req.text();
+  const { url } = JSON.parse(raw);
 
-  // raw가 진짜 JSON이면 이게 성공해야 함
-  let parsed: any = null;
-  let parseError: string | null = null;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e: any) {
-    parseError = String(e?.message ?? e);
-  }
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+  });
+  const html = await res.text();
+
+  const $ = cheerio.load(html);
+  $("script, style, noscript, iframe").remove();
+
+  const text =
+    clean($("article").text()) ||
+    clean($("main").text()) ||
+    clean($("body").text());
 
   return NextResponse.json({
     ok: true,
-    v: "RAW-DEBUG-1",
-    contentType: req.headers.get("content-type"),
-    rawLen: raw.length,
-    rawHead: raw.slice(0, 80),
-    rawTail: raw.slice(-80),
-    parseError,
-    parsed,
+    v: "CHEERIO-ONLY",
+    status: res.status,
+    textLen: text.length,
+    preview: text.slice(0, 400),
   });
 }
-
