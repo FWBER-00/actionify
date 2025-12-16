@@ -10,11 +10,12 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY ?? "";
     return NextResponse.json({
       ok: true,
-      v: "env-check",
-      build: BUILD,
+      v: "env-check-2",
+      vercelEnv: process.env.VERCEL_ENV ?? null,          // "production" / "preview" / "development"
+      vercelUrl: process.env.VERCEL_URL ?? null,          // 현재 배포 URL 힌트
+      gitSha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,7) ?? null,
       hasKey: key.length > 0,
-      keyPrefix: key ? key.slice(0, 3) : null,     // 보통 "sk-"
-      keyLen: key.length,                          // 길이만
+      keyLen: key.length,
     });
   }
 
