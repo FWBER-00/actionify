@@ -7,8 +7,16 @@ export const runtime = "nodejs";
 const BUILD = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local";
 
 export async function GET() {
-  return NextResponse.json({ ok: true, v: "cheerio+openai-v1", build: BUILD });
-}
+    const key = process.env.OPENAI_API_KEY ?? "";
+    return NextResponse.json({
+      ok: true,
+      v: "env-check",
+      build: BUILD,
+      hasKey: key.length > 0,
+      keyPrefix: key ? key.slice(0, 3) : null,     // 보통 "sk-"
+      keyLen: key.length,                          // 길이만
+    });
+  }
 
 function cleanAndTrim(text: string, maxChars = 12000) {
   const cleaned = text.replace(/\s+/g, " ").trim();
