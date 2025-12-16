@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
+import { JSDOM } from "jsdom";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json({ ok: true, v: "base-ok" });
-}
-
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  return NextResponse.json({ ok: true, v: "base-ok", body });
+  return NextResponse.json({
+    ok: true,
+    v: "jsdom-import-ok",
+    hasJSDOM: typeof JSDOM === "function",
+  });
 }
