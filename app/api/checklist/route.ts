@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { JSDOM } from "jsdom";
+import { Readability } from "@mozilla/readability";
 
 export const runtime = "nodejs";
 
@@ -6,19 +8,23 @@ export async function POST(req: Request) {
   const { url } = await req.json();
 
   const res = await fetch(url, {
-    headers: {
-      // 간단한 UA 없으면 막는 사이트가 있어서 최소값
-      "User-Agent": "Mozilla/5.0",
-    },
+    headers: { "User-Agent": "Mozilla/5.0" },
   });
 
   const html = await res.text();
 
+  const dom = new JSDOM(html, { url });
+  const reader = new Readability(dom.window.document);
+  const article = reader.parse();
+
   return NextResponse.json({
     ok: true,
-    v: "v3-fetch",
+    v: "v4-readability",
     status: res.status,
-    html_len: html.length,
-    head: html.slice(0, 200),
+    title: article?.title ?? null,
+    excerpt: article?.excerpt ?? null,
+    text_len: article?.textContent?.length ?? 0,
+    text_head: article?.textContent?.slice(0, 200) ?? null,
   });
 }
+
