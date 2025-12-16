@@ -18,7 +18,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checklist, setChecklist] = useState<Checklist | null>(null);
-
   const [done, setDone] = useState<Record<number, boolean>>({});
 
   const progress = useMemo(() => {
@@ -65,145 +64,223 @@ export default function Home() {
     }
   }
 
-  return (
-    <main style={{ maxWidth: 860, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800 }}>URL → 실행 체크리스트</h1>
-      <p style={{ marginTop: 8, opacity: 0.75 }}>
-        URL을 넣으면 요약이 아니라 “바로 실행 가능한 체크리스트”를 뽑아준다.
-      </p>
+  // ===== Dark theme tokens (inline) =====
+  const c = {
+    bg: "#0b0b0f",
+    panel: "#12121a",
+    panel2: "#161624",
+    border: "rgba(255,255,255,0.10)",
+    border2: "rgba(255,255,255,0.14)",
+    text: "rgba(255,255,255,0.92)",
+    muted: "rgba(255,255,255,0.65)",
+    muted2: "rgba(255,255,255,0.50)",
+    danger: "#ff4d6d",
+    btn: "#ffffff",
+    btnText: "#0b0b0f",
+    btnDisabled: "rgba(255,255,255,0.25)",
+    chip: "rgba(255,255,255,0.08)",
+  };
 
-      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://..."
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background: c.bg,
+        color: c.text,
+        padding: 16,
+      }}
+    >
+      <div style={{ maxWidth: 900, margin: "40px auto" }}>
+        <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: -0.4 }}>
+          URL → 실행 체크리스트
+        </h1>
+        <p style={{ marginTop: 8, color: c.muted }}>
+          URL을 넣으면 요약이 아니라 “바로 실행 가능한 체크리스트”를 뽑아준다.
+        </p>
+
+        <div
           style={{
-            flex: 1,
-            padding: 10,
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            outline: "none",
-          }}
-        />
-        <button
-          onClick={onGenerate}
-          disabled={loading}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: loading ? "#f4f4f4" : "white",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontWeight: 700,
+            display: "flex",
+            gap: 10,
+            marginTop: 16,
+            padding: 12,
+            borderRadius: 14,
+            border: `1px solid ${c.border}`,
+            background: c.panel,
           }}
         >
-          {loading ? "생성 중..." : "체크리스트 생성"}
-        </button>
-      </div>
-
-      {error && (
-        <p style={{ color: "crimson", marginTop: 12, whiteSpace: "pre-wrap" }}>
-          {error}
-        </p>
-      )}
-
-      {checklist && (
-        <section style={{ marginTop: 22 }}>
-          <div
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://..."
             style={{
-              border: "1px solid #eee",
+              flex: 1,
+              padding: 12,
+              border: `1px solid ${c.border2}`,
               borderRadius: 12,
-              padding: 14,
+              outline: "none",
+              background: c.panel2,
+              color: c.text,
+            }}
+          />
+          <button
+            onClick={onGenerate}
+            disabled={loading}
+            style={{
+              padding: "12px 14px",
+              borderRadius: 12,
+              border: "none",
+              background: loading ? c.btnDisabled : c.btn,
+              color: c.btnText,
+              fontWeight: 900,
+              cursor: loading ? "not-allowed" : "pointer",
+              whiteSpace: "nowrap",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-              <div style={{ fontWeight: 800 }}>Summary</div>
-              <div style={{ opacity: 0.7 }}>
-                {progress.doneCount}/{progress.total} ({progress.pct}%)
-              </div>
-            </div>
+            {loading ? "생성 중..." : "체크리스트 생성"}
+          </button>
+        </div>
 
-            <p style={{ marginTop: 8, lineHeight: 1.5 }}>{checklist.summary}</p>
+        {error && (
+          <p style={{ color: c.danger, marginTop: 12, whiteSpace: "pre-wrap" }}>
+            {error}
+          </p>
+        )}
 
+        {checklist && (
+          <section style={{ marginTop: 22 }}>
+            {/* Summary card */}
             <div
               style={{
-                marginTop: 10,
-                height: 10,
-                borderRadius: 999,
-                background: "#f2f2f2",
-                overflow: "hidden",
+                border: `1px solid ${c.border}`,
+                borderRadius: 14,
+                padding: 14,
+                background: c.panel,
               }}
             >
               <div
                 style={{
-                  height: "100%",
-                  width: `${progress.pct}%`,
-                  background: "#111",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  alignItems: "center",
                 }}
-              />
-            </div>
-          </div>
+              >
+                <div style={{ fontWeight: 900 }}>Summary</div>
 
-          <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 16 }}>
-            Checklist Items
-          </h2>
-
-          <ul style={{ marginTop: 12, paddingLeft: 0, listStyle: "none" }}>
-            {checklist.items.map((it, idx) => {
-              const checked = !!done[idx];
-              return (
-                <li
-                  key={idx}
+                <div
                   style={{
-                    border: "1px solid #eee",
-                    borderRadius: 12,
-                    padding: 14,
-                    marginBottom: 10,
-                    background: checked ? "#fafafa" : "white",
+                    color: c.muted,
+                    fontWeight: 700,
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: c.chip,
+                    border: `1px solid ${c.border}`,
                   }}
                 >
-                  <label style={{ display: "flex", gap: 10, alignItems: "start" }}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) =>
-                        setDone((prev) => ({ ...prev, [idx]: e.target.checked }))
-                      }
-                      style={{ marginTop: 4 }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div
+                  {progress.doneCount}/{progress.total} ({progress.pct}%)
+                </div>
+              </div>
+
+              <p style={{ marginTop: 10, lineHeight: 1.6, color: c.text }}>
+                {checklist.summary}
+              </p>
+
+              <div
+                style={{
+                  marginTop: 12,
+                  height: 10,
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.10)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${progress.pct}%`,
+                    background: "rgba(255,255,255,0.85)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: 18, fontWeight: 900, marginTop: 18 }}>
+              Checklist Items
+            </h2>
+
+            <ul style={{ marginTop: 12, paddingLeft: 0, listStyle: "none" }}>
+              {checklist.items.map((it, idx) => {
+                const checked = !!done[idx];
+                return (
+                  <li
+                    key={idx}
+                    style={{
+                      border: `1px solid ${c.border}`,
+                      borderRadius: 14,
+                      padding: 14,
+                      marginBottom: 10,
+                      background: checked ? "rgba(255,255,255,0.05)" : c.panel,
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "flex-start",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setDone((prev) => ({ ...prev, [idx]: e.target.checked }))
+                        }
                         style={{
-                          fontWeight: 800,
-                          textDecoration: checked ? "line-through" : "none",
+                          marginTop: 4,
+                          width: 18,
+                          height: 18,
+                          accentColor: "#ffffff",
                         }}
-                      >
-                        {it.title}
-                      </div>
+                      />
 
-                      {it.reason && (
-                        <div style={{ marginTop: 6, opacity: 0.75 }}>
-                          {it.reason}
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontWeight: 900,
+                            color: c.text,
+                            textDecoration: checked ? "line-through" : "none",
+                            opacity: checked ? 0.75 : 1,
+                          }}
+                        >
+                          {it.title}
                         </div>
-                      )}
 
-                      {Array.isArray(it.steps) && it.steps.length > 0 && (
-                        <ul style={{ marginTop: 10, paddingLeft: 18 }}>
-                          {it.steps.map((s, i) => (
-                            <li key={i} style={{ marginBottom: 6 }}>
-                              {s}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+                        {it.reason && (
+                          <div style={{ marginTop: 8, color: c.muted }}>
+                            {it.reason}
+                          </div>
+                        )}
+
+                        {Array.isArray(it.steps) && it.steps.length > 0 && (
+                          <ul style={{ marginTop: 12, paddingLeft: 18, color: c.muted2 }}>
+                            {it.steps.map((s, i) => (
+                              <li key={i} style={{ marginBottom: 8, color: c.muted }}>
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
     </main>
   );
 }
