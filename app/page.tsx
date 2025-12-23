@@ -1,44 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-type ChecklistItem = {
-  title: string;
-  reason: string;
-  steps: string[];
-};
-
-type Checklist = {
-  summary: string;
-  items: ChecklistItem[];
+type Result = {
+  summary_one_liner: string;
+  score: number;
+  top_issues: { title: string; reason: string; impact: string }[];
+  quick_wins: { action: string; how: string; example_copy?: string | null }[];
+  priority_plan: string[];
+  checked_criteria: string[];
 };
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [checklist, setChecklist] = useState<Checklist | null>(null);
-  const [done, setDone] = useState<Record<number, boolean>>({});
-
-  const progress = useMemo(() => {
-    if (!checklist?.items?.length) return { doneCount: 0, total: 0, pct: 0 };
-    const total = checklist.items.length;
-    const doneCount = checklist.items.reduce(
-      (acc, _, idx) => acc + (done[idx] ? 1 : 0),
-      0
-    );
-    const pct = total ? Math.round((doneCount / total) * 100) : 0;
-    return { doneCount, total, pct };
-  }, [checklist, done]);
+  const [result, setResult] = useState<Result | null>(null);
 
   async function onGenerate() {
     setError("");
-    setChecklist(null);
-    setDone({});
+    setResult(null);
 
-    const u = url.trim();
-    if (!u) {
-      setError("URL을 입력해.");
+    if (!url.trim()) {
+      setError("URL을 입력해줘.");
       return;
     }
 
@@ -47,16 +31,14 @@ export default function Home() {
       const res = await fetch("/api/checklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: u }),
+        body: JSON.stringify({ url }),
       });
 
       const data = await res.json();
-
       if (!res.ok || !data.ok) {
-        throw new Error(data?.error || `request failed: ${res.status}`);
+        throw new Error(data?.error || "진단에 실패했어.");
       }
-
-      setChecklist(data.checklist);
+      setResult(data.data);
     } catch (e: any) {
       setError(String(e?.message ?? e));
     } finally {
@@ -64,220 +46,71 @@ export default function Home() {
     }
   }
 
-  // ===== Dark theme tokens (inline) =====
-  const c = {
-    bg: "#0b0b0f",
-    panel: "#12121a",
-    panel2: "#161624",
-    border: "rgba(255,255,255,0.10)",
-    border2: "rgba(255,255,255,0.14)",
-    text: "rgba(255,255,255,0.92)",
-    muted: "rgba(255,255,255,0.65)",
-    muted2: "rgba(255,255,255,0.50)",
-    danger: "#ff4d6d",
-    btn: "#ffffff",
-    btnText: "#0b0b0f",
-    btnDisabled: "rgba(255,255,255,0.25)",
-    chip: "rgba(255,255,255,0.08)",
-  };
-
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: c.bg,
-        color: c.text,
-        padding: 16,
-      }}
-    >
-      <div style={{ maxWidth: 900, margin: "40px auto" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: -0.4 }}>
-          랜딩페이지 전환 진단기
-        </h1>
-        <p style={{ marginTop: 8, color: c.muted }}>
-          URL을 넣으면 “요약”이 아니라, 전환을 막는 문제와 바로 고칠 문구/액션을 뽑아준다.
+    <main style={{ minHeight: "100vh", background: "#0b0b0f", color: "#fff", padding: 24 }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <h1 style={{ fontSize: 28, fontWeight: 900 }}>랜딩페이지 전환 진단기</h1>
+        <p style={{ opacity: 0.7, marginTop: 8 }}>
+          URL 하나로 전환을 막는 문제와 바로 고칠 액션을 뽑아준다.
         </p>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            marginTop: 16,
-            padding: 12,
-            borderRadius: 14,
-            border: `1px solid ${c.border}`,
-            background: c.panel,
-          }}
-        >
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            style={{
-              flex: 1,
-              padding: 12,
-              border: `1px solid ${c.border2}`,
-              borderRadius: 12,
-              outline: "none",
-              background: c.panel2,
-              color: c.text,
-            }}
+            placeholder="https://example.com"
+            style={{ flex: 1, padding: 12 }}
           />
-          <button
-            onClick={onGenerate}
-            disabled={loading}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 12,
-              border: "none",
-              background: loading ? c.btnDisabled : c.btn,
-              color: c.btnText,
-              fontWeight: 900,
-              cursor: loading ? "not-allowed" : "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {loading ? "진단 중..." : "전환 진단 생성"}
+          <button onClick={onGenerate} disabled={loading}>
+            {loading ? "진단 중..." : "진단"}
           </button>
         </div>
 
-        {error && (
-          <p style={{ color: c.danger, marginTop: 12, whiteSpace: "pre-wrap" }}>
-            {error}
-          </p>
-        )}
+        {error && <p style={{ color: "#ff6b6b", marginTop: 12 }}>{error}</p>}
 
-        {checklist && (
-          <section style={{ marginTop: 22 }}>
-            {/* Summary card */}
-            <div
-              style={{
-                border: `1px solid ${c.border}`,
-                borderRadius: 14,
-                padding: 14,
-                background: c.panel,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ fontWeight: 900 }}>진단 요약</div>
-
-                <div
-                  style={{
-                    color: c.muted,
-                    fontWeight: 700,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    background: c.chip,
-                    border: `1px solid ${c.border}`,
-                  }}
-                >
-                  {progress.doneCount}/{progress.total} ({progress.pct}%)
-                </div>
-              </div>
-
-              <p style={{ marginTop: 10, lineHeight: 1.6, color: c.text }}>
-                {checklist.summary}
-              </p>
-
-              <div
-                style={{
-                  marginTop: 12,
-                  height: 10,
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.10)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${progress.pct}%`,
-                    background: "rgba(255,255,255,0.85)",
-                  }}
-                />
-              </div>
-            </div>
-
-            <h2 style={{ fontSize: 18, fontWeight: 900, marginTop: 18 }}>
-              고쳐야 할 것 (우선순위 체크리스트)
+        {result && (
+          <section style={{ marginTop: 24 }}>
+            <h2 style={{ fontSize: 22 }}>
+              점수 {result.score}/100
             </h2>
+            <p style={{ marginTop: 8 }}>{result.summary_one_liner}</p>
 
-            <ul style={{ marginTop: 12, paddingLeft: 0, listStyle: "none" }}>
-              {checklist.items.map((it, idx) => {
-                const checked = !!done[idx];
-                return (
-                  <li
-                    key={idx}
-                    style={{
-                      border: `1px solid ${c.border}`,
-                      borderRadius: 14,
-                      padding: 14,
-                      marginBottom: 10,
-                      background: checked ? "rgba(255,255,255,0.05)" : c.panel,
-                    }}
-                  >
-                    <label
-                      style={{
-                        display: "flex",
-                        gap: 12,
-                        alignItems: "flex-start",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) =>
-                          setDone((prev) => ({ ...prev, [idx]: e.target.checked }))
-                        }
-                        style={{
-                          marginTop: 4,
-                          width: 18,
-                          height: 18,
-                          accentColor: "#ffffff",
-                        }}
-                      />
+            <h3 style={{ marginTop: 24 }}>🔥 가장 큰 문제 TOP 3</h3>
+            {result.top_issues.map((it, i) => (
+              <div key={i} style={{ marginTop: 12 }}>
+                <strong>{it.title}</strong> ({it.impact})  
+                <div style={{ opacity: 0.8 }}>{it.reason}</div>
+              </div>
+            ))}
 
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            fontWeight: 900,
-                            color: c.text,
-                            textDecoration: checked ? "line-through" : "none",
-                            opacity: checked ? 0.75 : 1,
-                          }}
-                        >
-                          {it.title}
-                        </div>
+            <h3 style={{ marginTop: 24 }}>⚡ 10분 Quick Wins</h3>
+            {result.quick_wins.map((q, i) => (
+              <div key={i} style={{ marginTop: 12 }}>
+                <strong>{q.action}</strong>
+                <div>{q.how}</div>
+                {q.example_copy && (
+                  <div style={{ opacity: 0.7 }}>예시: {q.example_copy}</div>
+                )}
+              </div>
+            ))}
 
-                        {it.reason && (
-                          <div style={{ marginTop: 8, color: c.muted }}>
-                            {it.reason}
-                          </div>
-                        )}
+            <h3 style={{ marginTop: 24 }}>🧭 우선순위 플랜</h3>
+            <ol>
+              {result.priority_plan.map((p, i) => (
+                <li key={i}>{p}</li>
+              ))}
+            </ol>
 
-                        {Array.isArray(it.steps) && it.steps.length > 0 && (
-                          <ul style={{ marginTop: 12, paddingLeft: 18, color: c.muted2 }}>
-                            {it.steps.map((s, i) => (
-                              <li key={i} style={{ marginBottom: 8, color: c.muted }}>
-                                {s}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
+            <button
+              style={{ marginTop: 24 }}
+              onClick={() =>
+                navigator.clipboard.writeText(
+                  JSON.stringify(result, null, 2)
+                )
+              }
+            >
+              결과 복사
+            </button>
           </section>
         )}
       </div>
