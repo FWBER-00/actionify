@@ -44,7 +44,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    /* ---- parse body ---- */
+    // ---- parse body ----
     const raw = await req.text();
     let payload: any;
     try {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       );
     }
 
-    /* ---- fetch page ---- */
+    // ---- fetch page ----
     let res: Response;
     try {
       res = await fetchWithTimeout(url, 10000);
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       );
     }
 
-    /* ---- extract text ---- */
+    // ---- extract text ----
     const $ = cheerio.load(html);
     $("script, style, noscript, iframe").remove();
 
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
 
     const content = trimTo(rawText, 12000);
 
-    // --- snapshot for trust ---
+    // ---- snapshot for trust ----
     const title = clean($("title").first().text()) || null;
     const h1 = clean($("h1").first().text()) || null;
     const metaDesc =
@@ -143,6 +143,7 @@ export async function POST(req: Request) {
       const t = clean($(el).text());
       if (!t) return;
       if (t.length > 40) return;
+
       const hit =
         /구매|구입|결제|신청|문의|상담|가입|무료|체험|다운로드|예약|견적|장바구니|바로|지금|Buy|Shop|Sign|Join|Start|Get|Contact/i.test(
           t
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
       button_count: $("button").length,
     };
 
-    /* ---- OpenAI ---- */
+    // ---- OpenAI ----
     const openai = new OpenAI({ apiKey });
 
     const completion = await openai.chat.completions.create({
@@ -245,10 +246,9 @@ Task:
       );
     }
 
-    /* ---- minimal schema guard ---- */
+    // ---- minimal schema guard ----
     const valid =
       result &&
-      result.snapshot &&
       typeof result.summary_one_liner === "string" &&
       typeof result.score === "number" &&
       result.score_breakdown &&
@@ -264,10 +264,12 @@ Task:
       );
     }
 
+    // ✅ 서버에서 뽑은 스냅샷을 강제로 사용 (프론트 안정)
+    result.snapshot = snapshot;
+
     return NextResponse.json({
       ok: true,
       data: result,
-      snapshot, // 서버에서 추출한 스냅샷도 같이 전달(신뢰)
       v: "CHECKLIST-API-V1.0.1",
     });
   } catch (e: any) {
@@ -277,5 +279,6 @@ Task:
     );
   }
 }
+
 
 
