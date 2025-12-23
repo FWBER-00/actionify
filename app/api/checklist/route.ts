@@ -39,7 +39,7 @@ async function fetchWithTimeout(url: string, ms = 10000) {
 
 /* ================= handlers ================= */
 export async function GET() {
-  return NextResponse.json({ ok: true, v: "CHECKLIST-API-V1" });
+  return NextResponse.json({ ok: true, v: "CHECKLIST-API-V1.0.1" });
 }
 
 export async function POST(req: Request) {
@@ -132,6 +132,33 @@ export async function POST(req: Request) {
 
     const content = trimTo(rawText, 12000);
 
+    // --- snapshot for trust ---
+    const title = clean($("title").first().text()) || null;
+    const h1 = clean($("h1").first().text()) || null;
+    const metaDesc =
+      $('meta[name="description"]').attr("content")?.trim() || null;
+
+    const ctaTexts = new Set<string>();
+    $("a, button").each((_, el) => {
+      const t = clean($(el).text());
+      if (!t) return;
+      if (t.length > 40) return;
+      const hit =
+        /구매|구입|결제|신청|문의|상담|가입|무료|체험|다운로드|예약|견적|장바구니|바로|지금|Buy|Shop|Sign|Join|Start|Get|Contact/i.test(
+          t
+        );
+      if (hit) ctaTexts.add(t);
+    });
+
+    const snapshot = {
+      title,
+      h1,
+      metaDesc,
+      cta_candidates: Array.from(ctaTexts).slice(0, 8),
+      link_count: $("a").length,
+      button_count: $("button").length,
+    };
+
     /* ---- OpenAI ---- */
     const openai = new OpenAI({ apiKey });
 
@@ -146,8 +173,23 @@ You are a senior CRO consultant.
 Return ONLY valid JSON with EXACTLY this schema and nothing else:
 
 {
+  "snapshot": {
+    "title": string | null,
+    "h1": string | null,
+    "metaDesc": string | null,
+    "cta_candidates": string[],
+    "link_count": number,
+    "button_count": number
+  },
   "summary_one_liner": string,
   "score": number,
+  "score_breakdown": {
+    "clarity": number,
+    "offer": number,
+    "trust": number,
+    "cta": number,
+    "friction": number
+  },
   "top_issues": [
     { "title": string, "reason": string, "impact": "HIGH" | "MEDIUM" | "LOW" }
   ],
@@ -161,7 +203,9 @@ Return ONLY valid JSON with EXACTLY this schema and nothing else:
 Rules:
 - top_issues MUST be exactly 3 items
 - quick_wins MUST be exactly 5 items
-- score must be 0~100 integer
+- score and each score_breakdown field must be 0~100 integer
+- score_breakdown must be roughly consistent with final score
+- Use provided snapshot as ground truth (do NOT invent page elements)
 - No markdown, no extra keys
 - Korean only
           `.trim(),
@@ -171,6 +215,9 @@ Rules:
           content: `
 URL: ${url}
 
+Snapshot (from page):
+${JSON.stringify(snapshot)}
+
 Page text:
 ${content}
 
@@ -179,6 +226,8 @@ Task:
 - Be specific and practical.
 - example_copy는 실제 바로 쓸 수 있는 문구로 작성.
 - summary_one_liner는 한 줄 결론.
+- checked_criteria는 "무엇을 확인했는지" 체크리스트처럼 8~14개로.
+- priority_plan은 4~6단계.
           `.trim(),
         },
       ],
@@ -197,19 +246,30 @@ Task:
     }
 
     /* ---- minimal schema guard ---- */
-    if (
-      typeof result?.summary_one_liner !== "string" ||
-      typeof result?.score !== "number" ||
-      !Array.isArray(result?.top_issues) ||
-      !Array.isArray(result?.quick_wins)
-    ) {
+    const valid =
+      result &&
+      result.snapshot &&
+      typeof result.summary_one_liner === "string" &&
+      typeof result.score === "number" &&
+      result.score_breakdown &&
+      Array.isArray(result.top_issues) &&
+      Array.isArray(result.quick_wins) &&
+      Array.isArray(result.priority_plan) &&
+      Array.isArray(result.checked_criteria);
+
+    if (!valid) {
       return NextResponse.json(
         { ok: false, error: "진단 결과 형식이 올바르지 않아." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ ok: true, data: result });
+    return NextResponse.json({
+      ok: true,
+      data: result,
+      snapshot, // 서버에서 추출한 스냅샷도 같이 전달(신뢰)
+      v: "CHECKLIST-API-V1.0.1",
+    });
   } catch (e: any) {
     return NextResponse.json(
       { ok: false, error: String(e?.message ?? e) },
