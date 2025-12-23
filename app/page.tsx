@@ -92,10 +92,10 @@ export default function Home() {
     >
       <div style={{ maxWidth: 900, margin: "40px auto" }}>
         <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: -0.4 }}>
-          URL → 실행 체크리스트
+          랜딩페이지 전환 진단기
         </h1>
         <p style={{ marginTop: 8, color: c.muted }}>
-          URL을 넣으면 요약이 아니라 “바로 실행 가능한 체크리스트”를 뽑아준다.
+          URL을 넣으면 “요약”이 아니라, 전환을 막는 문제와 바로 고칠 문구/액션을 뽑아준다.
         </p>
 
         <div
@@ -137,7 +137,7 @@ export default function Home() {
               whiteSpace: "nowrap",
             }}
           >
-            {loading ? "생성 중..." : "체크리스트 생성"}
+            {loading ? "진단 중..." : "전환 진단 생성"}
           </button>
         </div>
 
@@ -166,7 +166,7 @@ export default function Home() {
                   alignItems: "center",
                 }}
               >
-                <div style={{ fontWeight: 900 }}>Summary</div>
+                <div style={{ fontWeight: 900 }}>진단 요약</div>
 
                 <div
                   style={{
@@ -206,7 +206,7 @@ export default function Home() {
             </div>
 
             <h2 style={{ fontSize: 18, fontWeight: 900, marginTop: 18 }}>
-              Checklist Items
+              고쳐야 할 것 (우선순위 체크리스트)
             </h2>
 
             <ul style={{ marginTop: 12, paddingLeft: 0, listStyle: "none" }}>

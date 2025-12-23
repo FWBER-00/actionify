@@ -72,11 +72,28 @@ export async function POST(req: Request) {
         {
           role: "system",
           content:
-            'You create actionable checklists. Return ONLY valid JSON with this schema exactly: {"summary": string, "items": [{"title": string, "reason": string, "steps": string[]}]} . steps length 1-3. No markdown, no extra keys.',
+            'You are a conversion-rate optimization (CRO) consultant. Return ONLY valid JSON with this schema exactly: {"summary": string, "items": [{"title": string, "reason": string, "steps": string[]}]} . steps length 1-3. No markdown, no extra keys.',
         },
         {
           role: "user",
-          content: `URL: ${url}\n\nExtracted text:\n${content}\n\nCreate an actionable checklist (8-15 items).`,
+          content: `
+URL: ${url}
+
+Extracted page text:
+${content}
+
+Task:
+- Do NOT summarize the page.
+- Diagnose why this landing page may NOT convert (purchase/inquiry/signup).
+- Provide an actionable CRO checklist (8-12 items).
+- Each item:
+  - title: the issue (short, punchy)
+  - reason: why it hurts conversion (specific)
+  - steps: 1-3 concrete fixes. Include exact example copy when possible.
+- summary: 1-2 sentences verdict + where to focus first (Korean).
+
+Return Korean only.
+`.trim(),
         },
       ],
     });
@@ -127,3 +144,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
